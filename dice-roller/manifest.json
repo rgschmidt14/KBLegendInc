@@ -1,0 +1,21 @@
+{
+    "name": "Dice Roller PWA",
+    "short_name": "DiceRoller",
+    "description": "A simple and beautiful dice roller for TTRPGs.",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#2c2f33",
+    "theme_color": "#7289da",
+    "icons": [
+        {
+            "src": "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
