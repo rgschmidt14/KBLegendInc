@@ -3,7 +3,12 @@ import os
 import shutil
 from deepface import DeepFace
 import cv2
-from rotator import Rotator
+import logging
+
+# Set up logging
+logging.basicConfig(filename='error.log', level=logging.ERROR,
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger=logging.getLogger(__name__)
 
 class Sorter:
     def __init__(self, folder_path):
@@ -25,13 +30,8 @@ class Sorter:
 
         for img_path in self.image_files:
             try:
-                # Rotate the image if necessary
-                rotator = Rotator(img_path)
-                rotated_image_path = rotator.rotate()
-
                 # Extract face embeddings from the image.
-                # The `extract_faces` function can also return embeddings if the model is specified.
-                embedding_objs = DeepFace.represent(img_path=rotated_image_path, model_name='VGG-Face', enforce_detection=False)
+                embedding_objs = DeepFace.represent(img_path=img_path, model_name='VGG-Face', enforce_detection=False)
 
                 if not embedding_objs:
                     continue
@@ -61,7 +61,7 @@ class Sorter:
                         person_embeddings[new_person_id] = [embedding]
 
             except Exception as e:
-                print(f"Error processing {img_path}: {e}")
+                logger.error(f"Error processing {img_path}: {e}")
 
         self.move_files()
 

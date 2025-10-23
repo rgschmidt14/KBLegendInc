@@ -21,7 +21,7 @@ def install_packages():
         print("Installing missing packages...")
         python = sys.executable
         try:
-            subprocess.check_call([python, '-m', 'pip', 'install', *missing], stdout=subprocess.DEVNULL)
+            subprocess.check_call([python, '-m', 'pip', 'install', '--no-warn-script-location', *missing], stdout=subprocess.DEVNULL)
             print("All packages installed.")
         except subprocess.CalledProcessError as e:
             print(f"Error installing packages: {e}")

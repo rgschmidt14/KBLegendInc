@@ -20,7 +20,6 @@ This application automatically sorts your photos by the people in them using adv
 
 ## Future Updates
 
-- **Auto-Rotation:**  Automatically detect and correct the orientation of photos.
 - **Object Recognition:**  Sort photos by objects, scenes, or other criteria.
 - **Advanced UI:**  A more advanced UI with features like photo previews and manual tagging.
 
