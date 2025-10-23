@@ -20,6 +20,7 @@ This application automatically sorts your photos by the people in them using adv
 
 ## Future Updates
 
+- **Video Face Matching:** Analyze videos to find specific people. Users will be able to provide a picture of a person and the application will find all occurrences of that person in a single video or a folder of videos, providing timestamps for each match.
 - **Object Recognition:**  Sort photos by objects, scenes, or other criteria.
 - **Advanced UI:**  A more advanced UI with features like photo previews and manual tagging.
 
