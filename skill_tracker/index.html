@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Skill Tracker</h1>
+            <button id="open-skill-list-modal">Select Skill</button>
+            <button id="create-new-skill-btn">Create New Skill</button>
+        </header>
+        <main id="skill-display-container">
+            <!-- Selected skill content will be dynamically inserted here -->
+        </main>
+    </div>
+
+    <!-- Skill List Modal -->
+    <div id="skill-list-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Skill Library</h2>
+            <div class="skill-list-controls">
+                <input type="text" id="search-input" placeholder="Search skills...">
+                <select id="sort-select">
+                    <option value="name-asc">Sort by Name (A-Z)</option>
+                    <option value="name-desc">Sort by Name (Z-A)</option>
+                    <option value="date-created-desc">Sort by Date Created (Newest)</option>
+                    <option value="date-created-asc">Sort by Date Created (Oldest)</option>
+                    <option value="date-updated-desc">Sort by Date Updated (Newest)</option>
+                    <option value="date-updated-asc">Sort by Date Updated (Oldest)</option>
+                </select>
+                <select id="filter-select">
+                    <option value="all">Show All</option>
+                    <option value="published">Show Published</option>
+                    <option value="draft">Show Drafts</option>
+                </select>
+            </div>
+            <div id="skill-list">
+                <!-- Skill list will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill Creator/Editor Modal -->
+    <div id="skill-editor-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="editor-title">Create New Skill</h2>
+            <form id="skill-form">
+                <!-- Form content will be dynamically built here -->
+            </form>
+            <button id="publish-skill-button">Publish</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
