@@ -181,34 +181,65 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const { status, level } = getSkillStatus(skill);
-        const currentLevel = skill.levels.find(l => l.level === level) || skill.levels[0];
+        const { status, level: highestLevel } = getSkillStatus(skill);
+        const currentLevel = skill.levels.find(l => l.level === highestLevel) || skill.levels[0];
 
         const endorsementText = skill.endorsements && skill.endorsements.length > 0 ? `<em>(endorsed by ${skill.endorsements.join(', ')})</em>` : '';
 
         skillDisplayContainer.innerHTML = `
-            <div class="skill-header">
+            <div class="skill-header" data-skill-id="${skill.id}">
                 <h2>${skill.skillName} ${currentLevel.level} (${status})</h2>
+                <button id="edit-skill-btn">Edit Skill</button>
+                <button id="delete-skill-btn">Delete Skill</button>
                 <p><strong>Author:</strong> ${skill.authorName} ${endorsementText}</p>
                 <p><strong>Rating:</strong> ${skill.rating.usersAtLevel3} people have obtained level 3</p>
                 <p><em>Created: ${new Date(skill.createdAt).toLocaleDateString()} (Last Updated: ${new Date(skill.updatedAt).toLocaleDateString()})</em></p>
                 <p>${skill.overview}</p>
             </div>
-            ${skill.levels.map(level => `
+            ${skill.levels.map((level) => {
+                const nextLevel = skill.levels.find(l => l.level === level.level + 1);
+                const hasAchievedLevel = level.level <= highestLevel;
+                const congratulationsMessage = hasAchievedLevel ? '<p class="congrats">Congratulations on achieving this level!</p>' : '';
+
+                let pppHtml = '';
+                if (nextLevel) {
+                    pppHtml = `
+                        <div class="ppp-section">
+                            <h4>Prepare for Level ${nextLevel.level}</h4>
+                            <ul>${renderTasks(skill.id, nextLevel.prepare)}</ul>
+                            <h4>Practice for Level ${nextLevel.level}</h4>
+                            <ul>${renderTasks(skill.id, nextLevel.practice)}</ul>
+                            <h4>Prove for Level ${nextLevel.level}</h4>
+                            <ul>${renderTasks(skill.id, nextLevel.prove)}</ul>
+                        </div>
+                    `;
+                }
+
+                const maintenanceHtml = (level.level > 0 && level.maintenance && level.maintenance.length > 0)
+                    ? `<div class="maintenance-section">
+                           <h4 class="maintenance-title">Required Maintenance</h4>
+                           <div class="maintenance-content" style="display: none;">
+                               <ul>${renderTasks(skill.id, level.maintenance)}</ul>
+                           </div>
+                       </div>`
+                    : '';
+
+                // By default, only show the current and next level's content expanded.
+                const isContentVisible = level.level <= highestLevel + 1;
+
+                return `
                 <div class="skill-level">
                     <h3 class="level-title">Level ${level.level}</h3>
-                    <div class="level-content">
+                    <div class="level-content" style="display: ${isContentVisible ? 'block' : 'none'};">
+                        ${congratulationsMessage}
                         <p>${level.description}</p>
-                        ${level.maintenance ? `<h4>Required Maintenance</h4><ul>${renderTasks(skill.id, level.maintenance)}</ul>` : ''}
-                        <h4>Prepare</h4>
-                        <ul>${renderTasks(skill.id, level.prepare)}</ul>
-                        <h4>Practice</h4>
-                        <ul>${renderTasks(skill.id, level.practice)}</ul>
-                        <h4>Prove</h4>
-                        <ul>${renderTasks(skill.id, level.prove)}</ul>
+                        ${maintenanceHtml}
+                        <hr />
+                        ${pppHtml}
                     </div>
                 </div>
-            `).join('')}
+                `;
+            }).join('')}
         `;
     };
 
@@ -285,12 +316,33 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // Add event listener for collapsible sections
+    // Add event listener for collapsible sections and edit/delete buttons
     skillDisplayContainer.addEventListener('click', (event) => {
         if (event.target.classList.contains('level-title')) {
             const content = event.target.nextElementSibling;
             // Toggle visibility
             content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        } else if (event.target.classList.contains('maintenance-title')) {
+            const content = event.target.nextElementSibling;
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        }
+
+        const skillHeader = event.target.closest('.skill-header');
+        if (!skillHeader) return;
+
+        const skillId = skillHeader.dataset.skillId;
+        const skill = getSkills()[skillId];
+
+        if (event.target.id === 'edit-skill-btn') {
+            openSkillEditor(skill);
+        }
+
+        if (event.target.id === 'delete-skill-btn') {
+            if (confirm('Are you sure you want to delete this skill?')) {
+                deleteSkill(skillId);
+                renderSkill(null); // Clear the display
+                renderSkillList(); // Update the skill list modal
+            }
         }
     });
 
@@ -366,6 +418,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const publishSkillBtn = document.getElementById('publish-skill-button');
     let currentlyEditingSkillId = null;
 
+    const levelTooltips = [
+        "Level 0 -> 1 (First Steps): Define the initial actions required to start the skill. e.g., for a private pilot: find an intro flight, get study materials, find an instructor.",
+        "Level 1 -> 2 (Fledgling Ability): The user has started. What's needed to show progress and develop basic ability? e.g., gain knowledge, log required flight hours.",
+        "Level 2 -> 3 (Becoming Average): The user has basic ability. What's required to become proficient and meet the average standard? e.g., hone skills to pass the checkride and get a pilot's license.",
+        "Level 3 -> 4 (Going Beyond): The user is proficient. What does it take to go beyond the average and become an expert? e.g., improve tolerances, deepen knowledge, expand personal minimums.",
+        "Level 4 -> 5 (The Pinnacle): The user is an expert. What is involved in reaching the pinnacle of this skill and becoming legendary? e.g., become competent in all possible situations within the skill's scope.",
+        "Level 5 (Mastery): The user has reached the pinnacle. This level is for defining the ongoing maintenance required to stay at the top of their game."
+    ];
+
     const openSkillEditor = (skill = null) => {
         currentlyEditingSkillId = skill ? skill.id : null;
 
@@ -418,15 +479,27 @@ document.addEventListener('DOMContentLoaded', () => {
             skillData.levels.push(newLevel);
             renderLevelForm(newLevel, levelsContainer);
         });
+
+        skillForm.addEventListener('click', (event) => {
+            if (event.target.classList.contains('tooltip-icon')) {
+                alert(event.target.title);
+            }
+        });
     };
 
     const renderLevelForm = (level, container) => {
         const levelDiv = document.createElement('div');
         levelDiv.className = 'level-form';
-        levelDiv.dataset.level = level.level; // Add this line
+        levelDiv.dataset.level = level.level;
+
+        const tooltipText = levelTooltips[level.level] || "Define the requirements for this level.";
+
         levelDiv.innerHTML = `
-            <h4>Level ${level.level}</h4>
-            <textarea placeholder="Level description...">${level.description}</textarea>
+            <div class="level-form-header">
+                 <h4>Level ${level.level}</h4>
+                 <span class="tooltip-icon" title="${tooltipText}">?</span>
+            </div>
+            <textarea placeholder="Level description..." title="${tooltipText}">${level.description}</textarea>
             <div class="tasks-container" data-level="${level.level}">
                 <!-- Tasks will be rendered here -->
             </div>
