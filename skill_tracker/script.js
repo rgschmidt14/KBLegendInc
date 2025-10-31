@@ -163,9 +163,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.type === 'checkbox' && event.target.dataset.taskCode) {
             const skillId = event.target.dataset.skillId;
             const taskCode = event.target.dataset.taskCode;
+
+            // Preserve the state of collapsible sections before re-rendering
+            const openSections = new Set();
+            skillDisplayContainer.querySelectorAll('.collapsible-header').forEach(header => {
+                if (header.nextElementSibling.style.display === 'block') {
+                    openSections.add(header.textContent.trim());
+                }
+            });
+
             updateTaskStatus(skillId, taskCode, event.target.checked);
-            // Re-render the skill to reflect changes (e.g., parent task checked)
+
+            // Re-render the skill, which is necessary to update parent task statuses
             renderSkill(getSkills()[skillId]);
+
+            // Restore the state of the collapsible sections after re-rendering
+            skillDisplayContainer.querySelectorAll('.collapsible-header').forEach(header => {
+                // The default render logic opens some sections, so we must override it
+                // if the user had them closed.
+                if (openSections.has(header.textContent.trim())) {
+                    header.nextElementSibling.style.display = 'block';
+                    header.classList.add('active');
+                } else {
+                    header.nextElementSibling.style.display = 'none';
+                    header.classList.remove('active');
+                }
+            });
         }
     });
 
@@ -584,7 +607,35 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="level-card-content">
         `;
 
-        // PPP Section (for the next level)
+        // --- Section Order: Description -> Maintenance -> PPP ---
+
+        // 1. Level Description Section
+        html += `
+            <div class="collapsible-section">
+                <button type="button" class="collapsible-header">Level ${levelData.level} Description</button>
+                <div class="collapsible-content">
+                    <textarea class="level-description" placeholder="Level ${levelData.level} description...">${levelData.description}</textarea>
+                </div>
+            </div>
+        `;
+
+        // 2. Maintenance Section
+        if (levelData.level > 0) {
+            html += `
+                <div class="collapsible-section">
+                    <button type="button" class="collapsible-header">Required Maintenance for Level ${levelData.level}</button>
+                    <div class="collapsible-content">
+                        <div class="task-category" data-type="maintenance">
+                            <h4>Maintenance</h4>
+                            <ul class="task-list">${renderTaskForms(levelData.maintenance || [], 'maintenance')}</ul>
+                            <button type="button" class="add-task-btn" data-level="${levelData.level}" data-type="maintenance">Add Maintenance Task</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. PPP Section (for the next level)
         if (levelData.level < 5 && nextLevelData) {
             html += `
                 <div class="collapsible-section">
@@ -604,32 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h4>Prove</h4>
                             <ul class="task-list">${renderTaskForms(nextLevelData.prove || [], 'prove')}</ul>
                             <button type="button" class="add-task-btn" data-level="${nextLevelData.level}" data-type="prove">Add Prove Task</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Level Description Section
-        html += `
-            <div class="collapsible-section">
-                <button type="button" class="collapsible-header">Level ${levelData.level} Description</button>
-                <div class="collapsible-content">
-                    <textarea class="level-description" placeholder="Level ${levelData.level} description...">${levelData.description}</textarea>
-                </div>
-            </div>
-        `;
-
-        // Maintenance Section
-        if (levelData.level > 0) {
-            html += `
-                <div class="collapsible-section">
-                    <button type="button" class="collapsible-header">Required Maintenance for Level ${levelData.level}</button>
-                    <div class="collapsible-content">
-                        <div class="task-category" data-type="maintenance">
-                            <h4>Maintenance</h4>
-                            <ul class="task-list">${renderTaskForms(levelData.maintenance || [], 'maintenance')}</ul>
-                            <button type="button" class="add-task-btn" data-level="${levelData.level}" data-type="maintenance">Add Maintenance Task</button>
                         </div>
                     </div>
                 </div>
