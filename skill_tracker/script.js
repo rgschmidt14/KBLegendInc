@@ -445,10 +445,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderSkillForm = (skill) => {
         const defaultSkill = {
             skillName: '', authorName: '', endorsements: [], rating: { usersAtLevel3: 0 },
-            overview: '', levels: [], isDraft: true,
+            overview: '',
+            levels: Array.from({ length: 6 }, (_, i) => ({ level: i, description: '', prepare: [], practice: [], prove: [], maintenance: [] })),
+            isDraft: true,
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
         };
         const skillData = skill || defaultSkill;
+
+        // Ensure the skill data has exactly 6 levels (0-5) for the form
+        const levels = Array.from({ length: 6 }, (_, i) => {
+            return (skillData.levels && skillData.levels[i]) ? skillData.levels[i] : { level: i, description: '', prepare: [], practice: [], prove: [], maintenance: [] };
+        });
+        skillData.levels = levels;
+
 
         skillForm.innerHTML = `
             <input type="hidden" id="skillId" value="${skillData.id || ''}">
@@ -468,17 +477,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <textarea id="overview">${skillData.overview || ''}</textarea>
 
             <div id="levels-container"></div>
-            <button type="button" id="add-level-btn">Add Level</button>
         `;
 
         const levelsContainer = document.getElementById('levels-container');
         skillData.levels.forEach(level => renderLevelForm(level, levelsContainer));
-
-        document.getElementById('add-level-btn').addEventListener('click', () => {
-            const newLevel = { level: skillData.levels.length, description: '', prepare: [], practice: [], prove: [] };
-            skillData.levels.push(newLevel);
-            renderLevelForm(newLevel, levelsContainer);
-        });
 
         skillForm.addEventListener('click', (event) => {
             if (event.target.classList.contains('tooltip-icon')) {
@@ -494,6 +496,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tooltipText = levelTooltips[level.level] || "Define the requirements for this level.";
 
+        let buttonsHtml = '';
+        if (level.level < 5) { // Levels 0-4 get PPP buttons
+            buttonsHtml += `
+                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prepare">Add Prepare</button>
+                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="practice">Add Practice</button>
+                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prove">Add Prove</button>
+            `;
+        }
+        if (level.level > 0) { // Levels 1-5 get Maintenance buttons
+            buttonsHtml += `<button type="button" class="add-task-btn" data-level="${level.level}" data-type="maintenance">Add Maintenance</button>`;
+        }
+
         levelDiv.innerHTML = `
             <div class="level-form-header">
                  <h4>Level ${level.level}</h4>
@@ -503,10 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="tasks-container" data-level="${level.level}">
                 <!-- Tasks will be rendered here -->
             </div>
-            <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prepare">Add Prepare</button>
-            <button type="button" class="add-task-btn" data-level="${level.level}" data-type="practice">Add Practice</button>
-            <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prove">Add Prove</button>
-            <button type="button" class="add-task-btn" data-level="${level.level}" data-type="maintenance">Add Maintenance</button>
+            ${buttonsHtml}
         `;
         container.appendChild(levelDiv);
 
