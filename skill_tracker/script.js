@@ -275,9 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
                          <h3>Level ${level.level}</h3>
                     </div>
                     <div class="level-card-content">
-                        ${pppHtml}
                         ${descriptionHtml}
                         ${maintenanceHtml}
+                        ${pppHtml}
                     </div>
                 </div>
                 `;
@@ -899,6 +899,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return skill;
     };
+
+    // --- DATA EXPORT ---
+    const downloadSkillsBtn = document.getElementById('download-skills-btn');
+
+    downloadSkillsBtn.addEventListener('click', () => {
+        const skills = getSkills();
+        if (Object.keys(skills).length === 0) {
+            alert('Skill library is empty. Nothing to download.');
+            return;
+        }
+
+        const dataStr = JSON.stringify(skills, null, 4); // Pretty print JSON
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = 'skill_library.json';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+    });
+
+    // --- DATA IMPORT ---
+    const uploadSkillsBtn = document.getElementById('upload-skills-btn');
+    const uploadSkillsInput = document.getElementById('upload-skills-input');
+
+    uploadSkillsBtn.addEventListener('click', () => {
+        uploadSkillsInput.click();
+    });
+
+    uploadSkillsInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const newSkills = JSON.parse(e.target.result);
+
+                const addOrReplace = confirm("Press OK to add to the library, or Cancel to replace the library.");
+
+                if (addOrReplace) {
+                    if(confirm("Are you sure you want to add the skills from this file to your library? This will overwrite any skills with the same name.")){
+                        const currentSkills = getSkills();
+                        const updatedSkills = { ...currentSkills, ...newSkills };
+                        localStorage.setItem('skills', JSON.stringify(updatedSkills));
+                        alert('Skills added successfully!');
+                    }
+                } else {
+                    if(confirm("Are you sure you want to replace your entire skill library with the contents of this file? This action cannot be undone.")){
+                        localStorage.setItem('skills', JSON.stringify(newSkills));
+                        alert('Skill library replaced successfully!');
+                    }
+                }
+
+                renderSkill(null);
+                renderSkillList();
+
+            } catch (error) {
+                alert('Error reading or parsing the file. Please ensure it is a valid JSON file.');
+                console.error("Error during file import: ", error);
+            } finally {
+                uploadSkillsInput.value = '';
+            }
+        };
+        reader.readAsText(file);
+    });
 
     // --- Initial Load ---
     const initialize = () => {
