@@ -182,13 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const { status, level: highestLevel } = getSkillStatus(skill);
-        const currentLevel = skill.levels.find(l => l.level === highestLevel) || skill.levels[0];
-
         const endorsementText = skill.endorsements && skill.endorsements.length > 0 ? `<em>(endorsed by ${skill.endorsements.join(', ')})</em>` : '';
 
         skillDisplayContainer.innerHTML = `
             <div class="skill-header" data-skill-id="${skill.id}">
-                <h2>${skill.skillName} ${currentLevel.level} (${status})</h2>
+                <h2>${skill.skillName} - Current Level: ${highestLevel} (${status})</h2>
                 <button id="edit-skill-btn">Edit Skill</button>
                 <button id="delete-skill-btn">Delete Skill</button>
                 <p><strong>Author:</strong> ${skill.authorName} ${endorsementText}</p>
@@ -196,50 +194,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p><em>Created: ${new Date(skill.createdAt).toLocaleDateString()} (Last Updated: ${new Date(skill.updatedAt).toLocaleDateString()})</em></p>
                 <p>${skill.overview}</p>
             </div>
-            ${skill.levels.map((level) => {
-                const nextLevel = skill.levels.find(l => l.level === level.level + 1);
+            <div class="levels-display-container">
+            ${skill.levels.map((level, index) => {
+                const nextLevel = skill.levels[index + 1];
                 const hasAchievedLevel = level.level <= highestLevel;
-                const congratulationsMessage = hasAchievedLevel ? '<p class="congrats">Congratulations on achieving this level!</p>' : '';
+                const isCurrentLevel = level.level === highestLevel;
 
+                // PPP section for the next level
                 let pppHtml = '';
-                if (nextLevel) {
+                if (level.level < 5 && nextLevel) {
+                    const isNextLevelPppVisible = isCurrentLevel; // Only expand PPP for the current level
                     pppHtml = `
-                        <div class="ppp-section">
-                            <h4>Prepare for Level ${nextLevel.level}</h4>
-                            <ul>${renderTasks(skill.id, nextLevel.prepare)}</ul>
-                            <h4>Practice for Level ${nextLevel.level}</h4>
-                            <ul>${renderTasks(skill.id, nextLevel.practice)}</ul>
-                            <h4>Prove for Level ${nextLevel.level}</h4>
-                            <ul>${renderTasks(skill.id, nextLevel.prove)}</ul>
+                        <div class="collapsible-section">
+                            <button type="button" class="collapsible-header">Prepare, Practice, Prove for Level ${nextLevel.level}</button>
+                            <div class="collapsible-content" style="display: ${isNextLevelPppVisible ? 'block' : 'none'};">
+                                <h4>Prepare</h4>
+                                <ul>${renderTasks(skill.id, nextLevel.prepare)}</ul>
+                                <h4>Practice</h4>
+                                <ul>${renderTasks(skill.id, nextLevel.practice)}</ul>
+                                <h4>Prove</h4>
+                                <ul>${renderTasks(skill.id, nextLevel.prove)}</ul>
+                            </div>
                         </div>
                     `;
                 }
 
-                const maintenanceHtml = (level.level > 0 && level.maintenance && level.maintenance.length > 0)
-                    ? `<div class="maintenance-section">
-                           <h4 class="maintenance-title">Required Maintenance</h4>
-                           <div class="maintenance-content" style="display: none;">
-                               <ul>${renderTasks(skill.id, level.maintenance)}</ul>
-                           </div>
-                       </div>`
-                    : '';
+                // Description section
+                const congratulationsMessage = hasAchievedLevel ? '<p class="congrats">Congratulations on achieving this level!</p>' : '';
+                const isDescriptionVisible = hasAchievedLevel;
+                const descriptionHtml = `
+                    <div class="collapsible-section">
+                        <button type="button" class="collapsible-header">Level ${level.level} Description</button>
+                        <div class="collapsible-content" style="display: ${isDescriptionVisible ? 'block' : 'none'};">
+                            ${congratulationsMessage}
+                            <p>${level.description}</p>
+                        </div>
+                    </div>
+                `;
 
-                // By default, only show the current and next level's content expanded.
-                const isContentVisible = level.level <= highestLevel + 1;
+                // Maintenance section
+                let maintenanceHtml = '';
+                if (level.level > 0 && level.maintenance && level.maintenance.length > 0) {
+                     const isMaintenanceVisible = hasAchievedLevel;
+                     maintenanceHtml = `
+                        <div class="collapsible-section">
+                            <button type="button" class="collapsible-header">Required Maintenance for Level ${level.level}</button>
+                            <div class="collapsible-content" style="display: ${isMaintenanceVisible ? 'block' : 'none'};">
+                                <ul>${renderTasks(skill.id, level.maintenance)}</ul>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 return `
-                <div class="skill-level">
-                    <h3 class="level-title">Level ${level.level}</h3>
-                    <div class="level-content" style="display: ${isContentVisible ? 'block' : 'none'};">
-                        ${congratulationsMessage}
-                        <p>${level.description}</p>
-                        ${maintenanceHtml}
-                        <hr />
+                <div class="level-card">
+                    <div class="level-card-header">
+                         <h3>Level ${level.level}</h3>
+                    </div>
+                    <div class="level-card-content">
                         ${pppHtml}
+                        ${descriptionHtml}
+                        ${maintenanceHtml}
                     </div>
                 </div>
                 `;
             }).join('')}
+            </div>
         `;
     };
 
@@ -260,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                        data-task-code="${task.code}"
                        ${(task.checked && !task.isUnchecked) ? 'checked' : ''}>
                 <label for="task-${task.code}">${task.content}</label>
-                ${task.children && task.children.length > 0 ? `<ul>${renderTasks(skillId, task.children)}</ul>` : ''}
+                ${task.children && task.children.length > 0 ? `<ul class="task-list">${renderTasks(skillId, task.children)}</ul>` : ''}
             </li>
         `).join('');
     };
@@ -318,13 +338,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listener for collapsible sections and edit/delete buttons
     skillDisplayContainer.addEventListener('click', (event) => {
-        if (event.target.classList.contains('level-title')) {
-            const content = event.target.nextElementSibling;
-            // Toggle visibility
-            content.style.display = content.style.display === 'block' ? 'none' : 'block';
-        } else if (event.target.classList.contains('maintenance-title')) {
-            const content = event.target.nextElementSibling;
-            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        if (event.target.classList.contains('collapsible-header')) {
+            event.preventDefault();
+            const header = event.target;
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
         }
 
         const skillHeader = event.target.closest('.skill-header');
@@ -480,68 +503,147 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const levelsContainer = document.getElementById('levels-container');
-        skillData.levels.forEach(level => renderLevelForm(level, levelsContainer));
+        skillData.levels.forEach((level, index) => {
+            const nextLevel = skillData.levels[index + 1];
+            renderLevelForm(level, nextLevel, levelsContainer);
+        });
 
         skillForm.addEventListener('click', (event) => {
+            // Handle tooltips
             if (event.target.classList.contains('tooltip-icon')) {
                 alert(event.target.title);
+                return;
+            }
+
+            // Handle collapsible sections
+            if (event.target.classList.contains('collapsible-header')) {
+                event.preventDefault();
+                const header = event.target;
+                header.classList.toggle('active');
+                const content = header.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+                return;
+            }
+
+            // Handle adding new sub-tasks
+            if (event.target.classList.contains('add-subtask-btn')) {
+                event.preventDefault();
+                const button = event.target;
+                const taskItem = button.closest('.task-item');
+                const type = taskItem.closest('.task-category').dataset.type;
+                const subtaskList = taskItem.querySelector('.task-list');
+
+                if (subtaskList) {
+                    subtaskList.style.display = 'block';
+                    const newTaskHtml = renderTaskForms([{ content: '' }], type);
+                    subtaskList.insertAdjacentHTML('beforeend', newTaskHtml);
+                }
+                return;
+            }
+
+            // Handle adding new tasks
+            if (event.target.classList.contains('add-task-btn')) {
+                event.preventDefault();
+                const button = event.target;
+                const type = button.dataset.type;
+                const taskList = button.previousElementSibling; // The <ul> is right before the button
+                const newTaskHtml = renderTaskForms([{ content: '' }], type); // Render a single new task
+                taskList.insertAdjacentHTML('beforeend', newTaskHtml);
+                return;
+            }
+
+            // Handle deleting tasks
+            if (event.target.classList.contains('delete-task-btn')) {
+                event.preventDefault();
+                const taskItem = event.target.closest('.task-item');
+                if (taskItem) {
+                    taskItem.remove();
+                }
+                return;
             }
         });
     };
 
-    const renderLevelForm = (level, container) => {
+    const renderLevelForm = (levelData, nextLevelData, container) => {
         const levelDiv = document.createElement('div');
-        levelDiv.className = 'level-form';
-        levelDiv.dataset.level = level.level;
+        levelDiv.className = 'level-card';
+        levelDiv.dataset.level = levelData.level;
 
-        const tooltipText = levelTooltips[level.level] || "Define the requirements for this level.";
+        const tooltipText = levelTooltips[levelData.level] || "Define the requirements for this level.";
 
-        let buttonsHtml = '';
-        if (level.level < 5) { // Levels 0-4 get PPP buttons
-            buttonsHtml += `
-                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prepare">Add Prepare</button>
-                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="practice">Add Practice</button>
-                <button type="button" class="add-task-btn" data-level="${level.level}" data-type="prove">Add Prove</button>
+        // Card Header
+        let html = `
+            <div class="level-card-header" data-level="${levelData.level}">
+                <h3>Level ${levelData.level}</h3>
+                <span class="tooltip-icon" title="${tooltipText}">?</span>
+            </div>
+            <div class="level-card-content">
+        `;
+
+        // PPP Section (for the next level)
+        if (levelData.level < 5 && nextLevelData) {
+            html += `
+                <div class="collapsible-section">
+                    <button type="button" class="collapsible-header">Prepare, Practice, Prove for Level ${nextLevelData.level}</button>
+                    <div class="collapsible-content">
+                        <div class="task-category" data-type="prepare">
+                            <h4>Prepare</h4>
+                            <ul class="task-list">${renderTaskForms(nextLevelData.prepare || [], 'prepare')}</ul>
+                            <button type="button" class="add-task-btn" data-level="${nextLevelData.level}" data-type="prepare">Add Prepare Task</button>
+                        </div>
+                        <div class="task-category" data-type="practice">
+                            <h4>Practice</h4>
+                            <ul class="task-list">${renderTaskForms(nextLevelData.practice || [], 'practice')}</ul>
+                            <button type="button" class="add-task-btn" data-level="${nextLevelData.level}" data-type="practice">Add Practice Task</button>
+                        </div>
+                        <div class="task-category" data-type="prove">
+                            <h4>Prove</h4>
+                            <ul class="task-list">${renderTaskForms(nextLevelData.prove || [], 'prove')}</ul>
+                            <button type="button" class="add-task-btn" data-level="${nextLevelData.level}" data-type="prove">Add Prove Task</button>
+                        </div>
+                    </div>
+                </div>
             `;
         }
-        if (level.level > 0) { // Levels 1-5 get Maintenance buttons
-            buttonsHtml += `<button type="button" class="add-task-btn" data-level="${level.level}" data-type="maintenance">Add Maintenance</button>`;
+
+        // Level Description Section
+        html += `
+            <div class="collapsible-section">
+                <button type="button" class="collapsible-header">Level ${levelData.level} Description</button>
+                <div class="collapsible-content">
+                    <textarea class="level-description" placeholder="Level ${levelData.level} description...">${levelData.description}</textarea>
+                </div>
+            </div>
+        `;
+
+        // Maintenance Section
+        if (levelData.level > 0) {
+            html += `
+                <div class="collapsible-section">
+                    <button type="button" class="collapsible-header">Required Maintenance for Level ${levelData.level}</button>
+                    <div class="collapsible-content">
+                        <div class="task-category" data-type="maintenance">
+                            <h4>Maintenance</h4>
+                            <ul class="task-list">${renderTaskForms(levelData.maintenance || [], 'maintenance')}</ul>
+                            <button type="button" class="add-task-btn" data-level="${levelData.level}" data-type="maintenance">Add Maintenance Task</button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        levelDiv.innerHTML = `
-            <div class="level-form-header">
-                 <h4>Level ${level.level}</h4>
-                 <span class="tooltip-icon" title="${tooltipText}">?</span>
-            </div>
-            <textarea placeholder="Level description..." title="${tooltipText}">${level.description}</textarea>
-            <div class="tasks-container" data-level="${level.level}">
-                <!-- Tasks will be rendered here -->
-            </div>
-            ${buttonsHtml}
-        `;
+        html += `</div>`; // Close level-card-content
+        levelDiv.innerHTML = html;
         container.appendChild(levelDiv);
-
-        const tasksContainer = levelDiv.querySelector('.tasks-container');
-        ['prepare', 'practice', 'prove', 'maintenance'].forEach(type => {
-            if(level[type]) renderTaskForms(level[type], tasksContainer, type);
-        });
-
-        levelDiv.querySelectorAll('.add-task-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const level = e.target.dataset.level;
-                const type = e.target.dataset.type;
-                // Add a new empty task form
-                renderTaskForms([{ content: '', code: '' }], tasksContainer, type, true);
-            });
-        });
     };
 
-    const renderTaskForms = (tasks, container, type, isNew = false) => {
-        const taskList = document.createElement('ul');
-        taskList.innerHTML = `<h5>${type.charAt(0).toUpperCase() + type.slice(1)}</h5>`;
-
-        tasks.forEach(task => {
-            const taskItem = document.createElement('li');
+    const renderTaskForms = (tasks, type) => {
+        if (!tasks) return '';
+        return tasks.map(task => {
             let maintenanceHtml = '';
             if (type === 'maintenance') {
                 const period = task.maintenancePeriod || { value: 1, unit: 'months' };
@@ -555,49 +657,47 @@ document.addEventListener('DOMContentLoaded', () => {
                     </select>
                 `;
             }
-            taskItem.innerHTML = `
-                <input type="text" class="task-content" value="${task.content || ''}" placeholder="Task description...">
-                ${maintenanceHtml}
-                <button type="button" class="convert-to-subtask-btn">Make Sub-task</button>
-            `;
-            taskItem.querySelector('.convert-to-subtask-btn').addEventListener('click', (e) => {
-                const currentTask = e.target.parentElement;
-                const newParent = document.createElement('li');
-                newParent.innerHTML = `
-                    <input type="text" class="task-content" value="" placeholder="New parent task overview...">
-                    <ul></ul>
-                `;
-                currentTask.parentElement.insertBefore(newParent, currentTask);
-                newParent.querySelector('ul').appendChild(currentTask);
-            });
 
-            if (task.children && task.children.length > 0) {
-                renderTaskForms(task.children, taskItem);
-            }
-            taskList.appendChild(taskItem);
-        });
-        container.appendChild(taskList);
+            const childrenHtml = (task.children && task.children.length > 0)
+                ? `<ul class="task-list">${renderTaskForms(task.children, type)}</ul>`
+                : '<ul class="task-list" style="display: none;"></ul>'; // Hidden placeholder for new sub-tasks
+
+            return `
+                <li class="task-item">
+                    <div class="task-controls">
+                        <input type="text" class="task-content" value="${task.content || ''}" placeholder="Task description...">
+                        ${maintenanceHtml}
+                        <button type="button" class="add-subtask-btn">Add Sub-task</button>
+                        <button type="button" class="delete-task-btn">Delete</button>
+                    </div>
+                    ${childrenHtml}
+                </li>
+            `;
+        }).join('');
     };
 
     createNewSkillBtn.addEventListener('click', () => openSkillEditor(null));
     publishSkillBtn.addEventListener('click', () => {
         const skill = buildSkillObjectFromForm();
         if (skill) {
-            skill.isDraft = false;
+            skill.isDraft = false; // Mark as published
             saveSkill(skill);
             skillEditorModal.style.display = 'none';
-            renderSkill(skill);
+            renderSkill(getSkills()[skill.id]); // Re-render the updated skill
+            renderSkillList(); // Update skill list in case name changed
         }
     });
 
+    // Handle auto-save as draft when closing modal
     window.addEventListener('click', (event) => {
         if (event.target === skillListModal) {
             skillListModal.style.display = 'none';
         }
         if (event.target === skillEditorModal) {
             const skill = buildSkillObjectFromForm();
-            if (skill && skill.skillName) {
-                saveSkill(skill);
+            if (skill && skill.skillName) { // Only save if there's a skill name
+                saveSkill(skill); // Saved as a draft by default
+                renderSkillList();
             }
             skillEditorModal.style.display = 'none';
         }
@@ -605,71 +705,171 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildSkillObjectFromForm = () => {
         const skillId = document.getElementById('skillId').value;
-        const skill = getSkills()[skillId] || {
-            id: `skill_${new Date().getTime()}`,
+        const existingSkill = getSkills()[skillId];
+        const skill = existingSkill || {
+            id: skillId || `skill_${new Date().getTime()}`,
             createdAt: new Date().toISOString(),
+            levels: Array.from({ length: 6 }, (_, i) => ({ level: i, description: '', prepare: [], practice: [], prove: [], maintenance: [] }))
         };
 
         skill.skillName = document.getElementById('skillName').value;
-        if (!skill.skillName) return null;
+        if (!skill.skillName) {
+            // Don't alert here, just return null. The calling function can decide.
+            return null;
+        }
 
         skill.authorName = document.getElementById('authorName').value;
         skill.overview = document.getElementById('overview').value;
         skill.updatedAt = new Date().toISOString();
-        skill.isDraft = true;
+        skill.isDraft = true; // Always save as draft until "Publish" is clicked
 
         skill.endorsements = document.getElementById('endorsements').value.split(',').map(e => e.trim()).filter(Boolean);
         skill.rating = { usersAtLevel3: parseInt(document.getElementById('rating').value, 10) || 0 };
-        skill.levels = [];
 
-        document.querySelectorAll('.level-form').forEach((levelDiv) => {
-            const levelIndex = levelDiv.dataset.level;
-            const level = {
-                level: parseInt(levelIndex, 10),
-                description: levelDiv.querySelector('textarea').value,
-                prepare: [], practice: [], prove: [], maintenance: []
-            };
+        const newLevels = Array.from({ length: 6 }, (_, i) => {
+             const existingLevel = skill.levels.find(l => l.level === i) || {};
+             return {
+                level: i, description: '', prepare: [], practice: [], prove: [], maintenance: [],
+                ...existingLevel
+             };
+        });
 
-            const parseTasks = (container, type, parentCode) => {
-                const tasks = [];
-                const directChildren = Array.from(container.children).filter(el => el.tagName === 'LI');
 
-                directChildren.forEach((li, index) => {
-                    const taskContentInput = li.querySelector('.task-content');
-                    if (!taskContentInput) return;
+        document.querySelectorAll('.level-card').forEach((levelCard) => {
+            const levelIndex = parseInt(levelCard.dataset.level, 10);
+            const currentLevelObject = newLevels[levelIndex];
 
-                    const content = taskContentInput.value;
-                    if (!content) return;
+            const descriptionTextarea = levelCard.querySelector(`.level-description`);
+            if (descriptionTextarea) {
+                currentLevelObject.description = descriptionTextarea.value;
+            }
 
-                    const newCode = `${parentCode}-${index + 1}`;
-                    const task = {
-                        content: content,
-                        code: newCode
-                    };
+            if (levelIndex > 0) {
+                const maintenanceContainer = levelCard.querySelector(`.task-category[data-type="maintenance"]`);
+                if (maintenanceContainer) {
+                    const maintenanceTasks = [];
+                    maintenanceContainer.querySelectorAll('.task-list > .task-item').forEach(taskItem => {
+                        const contentInput = taskItem.querySelector('.task-content');
+                        if (contentInput && contentInput.value) {
+                            const task = { content: contentInput.value };
+                            const valueInput = taskItem.querySelector('.maintenance-value');
+                            const unitInput = taskItem.querySelector('.maintenance-unit');
+                            if (valueInput && unitInput) {
+                                task.maintenancePeriod = { value: parseFloat(valueInput.value) || 1, unit: unitInput.value };
+                            }
+                            maintenanceTasks.push(task);
+                        }
+                    });
+                    currentLevelObject.maintenance = maintenanceTasks;
+                }
+            }
 
-                    if (type === 'maintenance') {
-                        const value = li.querySelector('.maintenance-value').value;
-                        const unit = li.querySelector('.maintenance-unit').value;
-                        task.maintenancePeriod = { value: parseFloat(value) || 1, unit };
+            if (levelIndex < 5) {
+                const nextLevelObject = newLevels[levelIndex + 1];
+                ['prepare', 'practice', 'prove'].forEach(type => {
+                    const taskContainer = levelCard.querySelector(`.task-category[data-type="${type}"]`);
+                    if (taskContainer) {
+                        const tasks = [];
+                        taskContainer.querySelectorAll('.task-list > .task-item').forEach(taskItem => {
+                            const contentInput = taskItem.querySelector('.task-content');
+                            if (contentInput && contentInput.value) {
+                                tasks.push({ content: contentInput.value });
+                            }
+                        });
+                        nextLevelObject[type] = tasks;
                     }
-
-                    const sublist = li.querySelector('ul');
-                    if (sublist) {
-                        task.children = parseTasks(sublist, type, newCode);
-                    }
-
-                    tasks.push(task);
                 });
-                return tasks;
+            }
+        });
+
+        skill.levels = newLevels;
+
+        const parseTasksFromList = (listElement, type) => {
+            const tasks = [];
+            const taskItems = listElement.querySelectorAll(':scope > .task-item');
+
+            taskItems.forEach(item => {
+                const contentInput = item.querySelector(':scope > .task-controls > .task-content');
+                if (contentInput && contentInput.value) {
+                    const task = { content: contentInput.value };
+                    if (type === 'maintenance') {
+                         const valueInput = item.querySelector('.maintenance-value');
+                         const unitInput = item.querySelector('.maintenance-unit');
+                         if (valueInput && unitInput) {
+                             task.maintenancePeriod = { value: parseFloat(valueInput.value) || 1, unit: unitInput.value };
+                         }
+                    }
+
+                    const sublist = item.querySelector(':scope > .task-list');
+                    if (sublist && sublist.children.length > 0) {
+                        task.children = parseTasksFromList(sublist, type);
+                    }
+                    tasks.push(task);
+                }
+            });
+            return tasks;
+        };
+
+        document.querySelectorAll('.level-card').forEach((levelCard) => {
+            const levelIndex = parseInt(levelCard.dataset.level, 10);
+            const currentLevelObject = newLevels[levelIndex];
+
+            const descriptionTextarea = levelCard.querySelector(`.level-description`);
+            if (descriptionTextarea) {
+                currentLevelObject.description = descriptionTextarea.value;
+            }
+
+            // PPP tasks are for the *next* level
+            if (levelIndex < 5) {
+                const nextLevelObject = newLevels[levelIndex + 1];
+                ['prepare', 'practice', 'prove'].forEach(type => {
+                    const taskCategory = levelCard.querySelector(`.task-category[data-type="${type}"]`);
+                    if (taskCategory) {
+                        const taskList = taskCategory.querySelector('.task-list');
+                        if(taskList) nextLevelObject[type] = parseTasksFromList(taskList, type);
+                    }
+                });
+            }
+
+            // Maintenance tasks are for the *current* level
+            if (levelIndex > 0) {
+                const taskCategory = levelCard.querySelector(`.task-category[data-type="maintenance"]`);
+                if (taskCategory) {
+                    const taskList = taskCategory.querySelector('.task-list');
+                    if(taskList) currentLevelObject.maintenance = parseTasksFromList(taskList, 'maintenance');
+                }
+            }
+        });
+
+        skill.levels = newLevels;
+
+        // --- Assign Codes ---
+        skill.levels.forEach(level => {
+            const assignCodesRecursive = (tasks, parentCode) => {
+                tasks.forEach((task, index) => {
+                    task.code = `${parentCode}-${index + 1}`;
+                    if (task.children) {
+                        assignCodesRecursive(task.children, task.code);
+                    }
+                });
             };
 
-            levelDiv.querySelectorAll('.tasks-container > ul').forEach(ul => {
-                const type = ul.querySelector('h5').textContent.toLowerCase();
-                const typeCode = type.charAt(0).toUpperCase();
-                level[type] = parseTasks(ul, type, `${levelIndex}${typeCode}`);
-            });
+            const pppInitial = { 'prepare': 'PE', 'practice': 'PA', 'prove': 'PO' };
+            for(const type in pppInitial) {
+                 if (level[type]) {
+                    level[type].forEach((task, index) => {
+                        task.code = `${level.level}${pppInitial[type]}${index + 1}`;
+                        if (task.children) assignCodesRecursive(task.children, task.code);
+                    });
+                 }
+            }
 
-            skill.levels.push(level);
+            if (level.maintenance) {
+                level.maintenance.forEach((task, index) => {
+                    task.code = `${level.level}MNR${index + 1}`;
+                    if (task.children) assignCodesRecursive(task.children, task.code);
+                });
+            }
         });
 
         return skill;

@@ -87,26 +87,10 @@ button:hover {
 .skill-header h2 {
     color: #34495e;
 }
-.skill-level .level-title {
-    cursor: pointer;
-    background-color: #ecf0f1;
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 15px;
-}
 
 .congrats {
     color: green;
     font-weight: bold;
-}
-
-.maintenance-title {
-    cursor: pointer;
-}
-.skill-level .level-content {
-    display: none; /* Initially hidden */
-    padding-left: 20px;
-    border-left: 3px solid #bdc3c7;
 }
 
 ul {
@@ -156,17 +140,117 @@ li {
 #skill-form label {
     font-weight: bold;
 }
-.level-form {
-    border: 1px solid #e0e0e0;
-    padding: 15px;
-    margin-top: 15px;
-    border-radius: 5px;
+/* --- New Card-Based Editor Styles --- */
+.level-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    background-color: #fdfdfd;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.level-form-header {
+.level-card-header {
+    background-color: #f0f4f8;
+    padding: 10px 15px;
+    border-bottom: 1px solid #ddd;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.level-card-header h3 {
+    margin: 0;
+    color: #4a5568;
+}
+
+.level-card-content {
+    padding: 15px;
+}
+
+.collapsible-header {
+    width: 100%;
+    background-color: #e2e8f0;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    padding: 10px;
+    text-align: left;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #2d3748;
+    margin-top: 10px;
+}
+
+.collapsible-header:first-child {
+    margin-top: 0;
+}
+
+.collapsible-header.active,
+.collapsible-header:hover {
+    background-color: #cbd5e0;
+}
+
+.collapsible-content {
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    display: block; /* Initially shown */
+}
+
+.task-category {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+}
+.task-category:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.task-category h4 {
+    margin-bottom: 10px;
+    color: #718096;
+}
+
+.task-item {
+    margin-bottom: 10px;
+}
+
+.task-item .task-list {
+    padding-left: 30px;
+    margin-top: 10px;
+    border-left: 2px solid #e2e8f0;
+}
+
+.task-controls {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.task-content {
+    flex-grow: 1;
+}
+
+.add-subtask-btn {
+    background-color: #4299e1;
+    padding: 5px 10px;
+    font-size: 0.9em;
+}
+.add-subtask-btn:hover {
+    background-color: #3182ce;
+}
+
+.delete-task-btn {
+    background-color: #e53e3e;
+    padding: 5px 10px;
+    font-size: 0.9em;
+}
+.delete-task-btn:hover {
+    background-color: #c53030;
 }
 
 .tooltip-icon {
